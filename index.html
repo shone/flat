@@ -1,13 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>flat</title>
 
-  <head>
-    <meta charset="utf-8">
-    <title>Floorplan</title>
-  </head>
+		<style>
+			html {
+				height: 100%;
+				overflow: hidden;
+			}
+			body {
+				height: 100%;
+				margin: 0;
+			}
+			canvas {
+				width:  100%;
+				height: 100%;
+			}
+		</style>
+	</head>
 
-  <body>
-    <img src="floorplan.svg">
-  </body>
+	<body>
+		<canvas></canvas>
+		<script type="importmap">
+			{
+				"imports": {
+					"three": "./three.module.min.js",
+					"../utils/BufferGeometryUtils.js": "./BufferGeometryUtils.js"
+				}
+			}
+		</script>
+		<script type="module">
+			'use strict';
+			import * as THREE from 'three';
+			import {OrbitControls} from './OrbitControls.js';
+			import {GLTFLoader} from './GLTFLoader.js';
 
+			const webglRenderer = new THREE.WebGLRenderer({canvas: document.querySelector('canvas')});
+			webglRenderer.setClearColor(new THREE.Color(0x191919), 1);
+			webglRenderer.setPixelRatio(window.devicePixelRatio);
+			webglRenderer.useLegacyLights = false;
+			webglRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+			webglRenderer.toneMappingExposure = 2;
+
+			const scene = new THREE.Scene();
+			const camera = new THREE.PerspectiveCamera(
+				60, // FOV
+				window.innerWidth / window.innerHeight, // Aspect
+				1, // Near
+				400, // Far
+			);
+
+			const ambientLight = new THREE.AmbientLight(0x9cdfff, .3);
+			scene.add(ambientLight);
+
+			const directionalLight = new THREE.DirectionalLight(0xffc557, .7);
+			directionalLight.position.x = 1.;
+			scene.add(directionalLight);
+
+			const directionalLight2 = new THREE.DirectionalLight(0xffffff, .2);
+			directionalLight2.position.x = -1.;
+			directionalLight2.position.y = -1.;
+			directionalLight2.position.z = .4;
+			scene.add(directionalLight2);
+
+			const material = new THREE.MeshStandardMaterial({
+				color: 0xffffff,
+				polygonOffset: true,
+				polygonOffsetFactor: 1, // positive value pushes polygon further away
+				polygonOffsetUnits: 1,
+				side: THREE.FrontSide,
+				metalness: 0,
+			});
+
+			const gltfLoader = new GLTFLoader();
+			const url = 'flat.glb';
+			gltfLoader.load(url, gltf => {
+				scene.add(gltf.scene);
+				console.log(`Loaded ${url}:`, gltf.scene);
+
+				const box = new THREE.Box3().setFromObject(gltf.scene);
+				const size = box.getSize(new THREE.Vector3()).length();
+				const center = box.getCenter(new THREE.Vector3());
+
+				gltf.scene.position.x += (gltf.scene.position.x - center.x);
+				gltf.scene.position.y += (gltf.scene.position.y - center.y);
+				gltf.scene.position.z += (gltf.scene.position.z - center.z);
+				camera.near = size / 100;
+				camera.far = size * 100;
+				camera.updateProjectionMatrix();
+
+				camera.position.copy(center);
+				camera.position.x += size / 2.0;
+				camera.position.y += size / 8.0;
+				camera.position.z += size / 2.0;
+				camera.lookAt(center);
+
+				const orbitControls = new OrbitControls(camera, webglRenderer.domElement);
+				orbitControls.maxDistance = size * 10;
+				orbitControls.screenSpacePanning = true;
+				orbitControls.addEventListener('change', () => webglRenderer.render(scene, camera));
+
+				gltf.scene.traverse(object => {
+					object.material = material;
+					// wireframe
+					const geo = new THREE.EdgesGeometry( object.geometry ); // or WireframeGeometry
+					const mat = new THREE.LineBasicMaterial( { color: 0x000000 } );
+					const wireframe = new THREE.LineSegments( geo, mat );
+					wireframe.position.copy(object.position);
+					wireframe.rotation.copy(object.rotation);
+					object.parent.add( wireframe );
+				});
+
+				webglRenderer.render(scene, camera)
+			});
+
+			function handleWindowResize() {
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				webglRenderer.setSize(window.innerWidth, window.innerHeight);
+				webglRenderer.render(scene, camera);
+			}
+			handleWindowResize();
+			window.addEventListener('resize', handleWindowResize);
+		</script>
+	</body>
 </html>
