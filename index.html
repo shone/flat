@@ -112,6 +112,9 @@
 				orbitControls.addEventListener('change', render);
 
 				gltf.scene.traverse(object => {
+					if (!object.geometry) {
+						return;
+					}
 					object.material = material;
 					// wireframe
 					const geo = new THREE.EdgesGeometry(object.geometry); // or WireframeGeometry
