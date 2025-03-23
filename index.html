@@ -2,6 +2,9 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+		<link rel="manifest" href="manifest.webmanifest">
+
 		<title>flat</title>
 
 		<style>
@@ -36,13 +39,19 @@
 
 		<link rel="preload" as="fetch" href="flat.glb" crossorigin />
 
-		<link rel="shortcut icon" href="icon_64x64.png">
+		<link rel="shortcut icon" href="icon/icon_64x64.png">
 	</head>
 
 	<body>
 		<canvas></canvas>
 
 		<script type="module">
+			// Register service worker so the app can be used offline.
+			// This is also a prerequisite for Chrome allowing the app to be installed as a PWA.
+			if (navigator.serviceWorker && location.protocol !== 'file:') {
+				navigator.serviceWorker.register('service-worker.js', {scope: './'});
+			}
+
 			import * as THREE from 'three';
 			import {OrbitControls} from './OrbitControls.js';
 			import {GLTFLoader} from './GLTFLoader.js';
